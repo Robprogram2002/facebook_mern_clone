@@ -1,0 +1,52 @@
+.RowVertical {
+  display: flex;
+  width: 100%;
+  border-radius: 10px;
+  padding: 6px 8px;
+  background-color: transparent;
+  justify-content: flex-start;
+  align-items: center;
+  transition: 0.1s all ease;
+  margin-top: 0.6rem;
+  cursor: pointer;
+}
+.RowVertical:hover {
+  background-color: rgba(66, 66, 66, 0.5);
+  transform: scale(1.08);
+}
+
+.RowHorizontal {
+  display: flex;
+  width: 100%;
+  border-radius: 10px;
+  padding: 6px 8px;
+  background-color: transparent;
+  justify-content: flex-start;
+  align-items: center;
+  transition: 0.1s all ease;
+  cursor: pointer;
+}
+.RowHorizontal:hover {
+  background-color: rgba(66, 66, 66, 0.5);
+  transform: scale(1.08);
+}
+
+.IconContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0rem 0.5rem;
+}
+
+.TextContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.TextContainer p {
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 400;
+  font-family: "Roboto", sans-serif;
+}

@@ -1,0 +1,182 @@
+.Overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  overflow: hidden;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+/* .ToggleContainer {
+  position: fixed;
+  z-index: 1000;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+} */
+
+.FormContainer {
+  background-color: #222222;
+  position: fixed;
+  left: 50%;
+  top: 45%;
+  z-index: 1000;
+  padding: 1.4rem;
+  width: 35%;
+  height: 80%;
+  border-radius: 16px;
+  transform: translate(-53%, -40%);
+  z-index: 1000;
+}
+
+.Header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.ExitContainer {
+  position: absolute;
+  top: 0rem;
+  right: 1.2rem;
+  border: none;
+  outline: none;
+  background-color: transparent;
+}
+
+.ExitIcon {
+  color: #969696;
+  font-size: 2rem;
+}
+
+.Header h2 {
+  color: #ffffff;
+  font-family: "Roboto", sans-serif;
+  font-size: 1.4rem;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+.UserData {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 1rem;
+  align-items: center;
+}
+
+.Avatar {
+  margin-right: 0.5rem;
+  color: #969696;
+}
+
+.Name {
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+.Textarea {
+  border: none;
+  outline: none;
+  background-color: transparent;
+  width: 100%;
+  padding: 0.8rem 0rem;
+  resize: none;
+  color: #acacac;
+  font-size: 1.4rem;
+  height: 120px;
+}
+
+.Textarea::placeholder {
+  font-size: 1.4rem;
+}
+
+.ButtonsContainer {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  margin: 1.2rem 0;
+}
+
+.PopupText {
+  background-color: #ffffff;
+  color: #222222;
+  border-radius: 8px;
+  width: 80px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  bottom: 2.5rem;
+}
+
+.ButtonContent {
+  position: relative;
+}
+
+.EmotionIcon {
+  background-color: gold;
+  color: darkgoldenrod;
+}
+
+.SubmitButton {
+  width: 100%;
+  background-color: rgba(66, 66, 66, 0.8);
+  color: #dadada;
+  font-family: "Robot", sans-serif;
+  border: none;
+  outline: none;
+  padding: 10px;
+  border-radius: 14px;
+  cursor: pointer;
+}
+
+.InputsContainer {
+  position: relative;
+  height: 80%;
+}
+
+.Footer {
+  position: absolute;
+  bottom: -0.5rem;
+  width: 100%;
+}
+
+.SelectedImageContainer {
+  width: 100%;
+  height: 100%;
+  max-height: 120px;
+}
+
+/* .SelectedImageContainer::-webkit-scrollbar {
+  display: none;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+} */
+
+.SelectedImage {
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  max-width: 100%;
+  border: 1px solid #acacac;
+  border-radius: 8px;
+}
+
+.BodyContainer {
+  overflow-y: scroll;
+  padding: 0.6rem;
+  padding-top: 0;
+}

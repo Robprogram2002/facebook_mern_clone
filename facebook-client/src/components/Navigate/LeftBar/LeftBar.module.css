@@ -1,0 +1,140 @@
+.Container {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  height: 100%;
+  width: 100%;
+  margin-right: 0.5rem;
+}
+
+.AvatarContainer {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  cursor: pointer;
+  padding: 1% 2%;
+  transition: 0.2s all;
+}
+
+.AvatarContainer:hover {
+  transform: scale(1.08);
+  background: rgb(92, 92, 92);
+  border-radius: 12px;
+}
+
+.SpanName {
+  color: #ffffff;
+  padding-left: 4px;
+  font-family: "Roboto", sans-serif;
+}
+
+.SpanNameActive {
+  color: royalblue;
+  padding-left: 4px;
+  font-family: "Roboto", sans-serif;
+}
+
+.ButtonIcon {
+  outline: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  width: 40px;
+  border: none;
+  background: #5c5c5c;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: 0.2s all;
+}
+
+.ButtonIcon:hover {
+  transform: scale(1.1);
+}
+
+.Icon {
+  color: #ffffff;
+}
+
+.ToggleContainer {
+  position: absolute;
+  background: #222222;
+  top: 4.5rem;
+  right: 1rem;
+  border-radius: 16px;
+  width: 350px;
+  padding: 1rem;
+  opacity: 1;
+}
+
+.UserData {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  cursor: pointer;
+  padding: 4% 6%;
+  transition: 0.2s all;
+  margin: 0.6rem 0;
+}
+
+.UserData:hover {
+  transform: scale(1.08);
+  background: rgb(92, 92, 92);
+  border-radius: 12px;
+}
+
+.Avatar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 20%;
+  height: 100%;
+}
+
+.Data {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.Data p {
+  color: #ffffff;
+  font-size: 1rem;
+  font-family: "Roboto", sans-serif;
+}
+
+.Data span {
+  color: #9c9c9c;
+  font-style: italic;
+}
+
+.SettingsContainer {
+  margin-top: 1rem;
+}
+
+.Setting {
+  display: grid;
+  grid-template-columns: 25% 50% 25%;
+  grid-template-rows: 1fr;
+  border-radius: 12px;
+  padding: 6px;
+  transition: 0.2s all ease;
+}
+
+.Setting:hover {
+  background: rgb(92, 92, 92);
+  transform: scale(1.05);
+}
+
+.SettingText {
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-family: "Robot", sans-serif;
+  letter-spacing: 0.7px;
+  height: 100%;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+}

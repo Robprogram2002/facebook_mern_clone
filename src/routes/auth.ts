@@ -1,7 +1,12 @@
 import { Router } from "express";
-import { singUpHandler, signInHandler } from "../controllers/authController";
+import {
+  singUpHandler,
+  signInHandler,
+  me,
+} from "../controllers/authController";
 import { body } from "express-validator";
 import User from "../models/User";
+import isAuth from "../middleware/is-auth";
 
 const route = Router();
 
@@ -43,5 +48,7 @@ route.post(
   ],
   signInHandler
 );
+
+route.post("/me", isAuth, me);
 
 export default route;

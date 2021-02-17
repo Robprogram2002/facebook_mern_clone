@@ -1,0 +1,64 @@
+.Container {
+  width: 100%;
+  height: 100%;
+  background-color: #212122;
+  border-radius: 14px;
+  padding: 0.8rem 2rem;
+  box-shadow: -1px 1px 1px 1px rgba(0, 0, 0, 0.4);
+}
+
+.ToggleSection {
+  display: grid;
+  grid-template-columns: 10% 90%;
+  grid-template-rows: 1fr;
+  gap: 0;
+  height: 40%;
+  margin-top: 0.5rem;
+  border-bottom: 0.5px solid #ffffff;
+  padding-bottom: 3rem;
+}
+
+.IconContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.Icon {
+  color: #ffffff;
+  font-size: 2rem;
+  margin-right: 0.5rem;
+}
+
+.Input {
+  width: 100%;
+  height: 100%;
+  outline: none;
+  background-color: rgba(88, 88, 88, 0.45);
+  border: none;
+  border-radius: 18px;
+  color: #9e9e9e;
+  font-size: 1rem;
+  font-family: "Roboto", sans-serif;
+  cursor: pointer;
+  text-align: start;
+  padding-left: 1.5rem;
+}
+
+.Input:hover {
+  background-color: rgba(88, 88, 88, 0.747);
+}
+
+.ButtonsContainer {
+  margin-top: 0.4rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.OnlineIcon {
+  color: rgb(0, 128, 96);
+}
+
+.PhotoIcon {
+  color: crimson;
+}

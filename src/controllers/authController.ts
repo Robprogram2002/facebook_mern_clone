@@ -19,7 +19,7 @@ export const singUpHandler = async (
       const error: CustomError = {
         name: "SignUp error",
         messages: errors,
-        status: 201,
+        status: 400,
       };
       throw error;
     }
@@ -42,7 +42,6 @@ export const singUpHandler = async (
     });
     const result = await user.save();
     res.status(201).json({ message: "User created!", userId: result._id });
-    console.log(result);
   } catch (error) {
     next(error);
   }
@@ -113,14 +112,36 @@ export const signInHandler = async (
       }
     );
     res.header("auth-token", token).json({
-      token,
-      user: {
-        _id: user.id,
-        name: user.userName,
-        perfil: user.profile?.imageProfile,
+      userToken: {
+        token,
+        expireSeconds: 7200,
       },
+      user,
     });
   } catch (error) {
+    next(error);
+  }
+};
+
+// terminar me route y el codigo en front para auto logear al usuario usando el token
+
+export const me = async (req: Request, res: Response, next: NextFunction) => {
+  const userId = res.locals.userId;
+  try {
+    const user = await User.findById(userId);
+
+    if (!user) {
+      const error: CustomError = {
+        name: "Me request error",
+        messages: "No user found",
+        status: 404,
+      };
+      throw error;
+    }
+
+    return res.status(200).json({ user });
+  } catch (error) {
+    console.log(error);
     next(error);
   }
 };

@@ -1,0 +1,31 @@
+.Container {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: 22% 50% 28%;
+  grid-template-rows: 1fr;
+  border-bottom: 0.3px solid #494949;
+  gap: 0;
+  background-color: #222222;
+  position: sticky;
+  z-index: 1000;
+  top: 0;
+}
+
+.Left {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1rem;
+}
+
+.Logo {
+  margin-right: 0.5rem;
+  background: #ffffff;
+}
+
+.CentralBar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
