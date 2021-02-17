@@ -1,23 +1,10 @@
 import { Schema, model, Document } from "mongoose";
+import { JobData, SchoolData } from "./modelTypes";
 
 interface Favorite {
   entityType: string;
   entityId: string;
   createdAt: any;
-}
-
-interface SchoolData {
-  place: string;
-  college: string;
-  level: string;
-  description: string;
-}
-
-interface JobData {
-  position: string;
-  place: string;
-  description: string;
-  time: string;
 }
 
 interface LifeEvent {

@@ -1,5 +1,4 @@
 import { Schema } from "mongoose";
-import { type } from "os";
 
 export type Like = {
   username: string;
@@ -10,6 +9,19 @@ export type Reaction = {
   instance: string;
 };
 
+export interface SchoolData {
+  place: string;
+  college: string;
+  level: string;
+  description: string;
+}
+
+export interface JobData {
+  position: string;
+  place: string;
+  description: string;
+  time: string;
+}
 
 // export interface LikeMap {
 //   [userId: string]: { username: string };
@@ -50,4 +62,3 @@ export const LikeSchema = new Schema(
   },
   { _id: false, id: false }
 );
-

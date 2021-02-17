@@ -7,7 +7,7 @@ import bodyParser from "body-parser";
 import authRoutes from "./routes/auth";
 import postsRoutes from "./routes/posts";
 import commentRoutes from "./routes/comments";
-// import profileRoutes from "./routes/profile";
+import profileRoutes from "./routes/profile";
 import albumRoutes from "./routes/albums";
 
 const app: Application = express();
@@ -32,7 +32,7 @@ app.use((req, res, next) => {
 app.use("/accounts", authRoutes);
 app.use("/posts", postsRoutes);
 app.use("/comments", commentRoutes);
-// app.use("/profile", profileRoutes);
+app.use("/profile", profileRoutes);
 app.use("/albums", albumRoutes);
 
 //error midlleware

@@ -7,6 +7,7 @@ export interface IAlbum extends Document {
   comments?: any[];
   likes?: Array<{ userId: string; username: string }>;
   status?: "active" | "suspended" | "deleted";
+  cover: string;
 }
 
 const albumSchema = new Schema(
@@ -22,6 +23,10 @@ const albumSchema = new Schema(
     status: {
       type: String,
       default: "active",
+    },
+    cover: {
+      type: String,
+      required: true,
     },
     items: [
       {

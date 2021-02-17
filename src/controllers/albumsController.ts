@@ -1,9 +1,7 @@
 import { Request, Response, NextFunction } from "express";
-import { validationResult } from "express-validator";
 import User from "../models/User";
 import Post from "../models/Post";
 import Album from "../models/Album";
-import { send } from "process";
 
 export const getOneHandler = async (
   req: Request,
@@ -69,6 +67,7 @@ export const createOneHandler = async (
         userId: userid,
         title: title,
         items: [post.id],
+        cover: media,
       });
 
       await newAlbum.save();
@@ -84,6 +83,7 @@ export const createOneHandler = async (
       const newAlbum = await Album.create({
         userId: userid,
         title: title,
+        cover: media,
       });
 
       await newAlbum.save();

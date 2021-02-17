@@ -17,7 +17,10 @@ export interface IPost extends Document {
   reactions: Map<string, Reaction>;
   // likes: Record<string, Like>;
   likes: Map<string, Like>;
-  galleryId?: string;
+  gallery?: {
+    title: string;
+    id: string;
+  };
   comunityId?: string;
 }
 
@@ -62,9 +65,9 @@ const postSchema = new Schema(
       type: Map,
       of: LikeSchema,
     },
-    galleryId: {
-      type: Schema.Types.ObjectId,
-      ref: "Album",
+    gallery: {
+      title: String,
+      id: Schema.Types.ObjectId,
     },
     comunityId: {
       type: Schema.Types.ObjectId,
