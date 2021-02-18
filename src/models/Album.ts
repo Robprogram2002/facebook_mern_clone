@@ -3,6 +3,7 @@ import { Schema, model, Document } from "mongoose";
 export interface IAlbum extends Document {
   userId: string;
   title: string;
+  description?: string;
   items?: string[];
   comments?: any[];
   likes?: Array<{ userId: string; username: string }>;
@@ -16,6 +17,7 @@ const albumSchema = new Schema(
       type: Schema.Types.ObjectId,
       required: true,
     },
+    description: String,
     title: {
       type: String,
       required: true,

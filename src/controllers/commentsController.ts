@@ -241,8 +241,7 @@ export const deleteCommentHandler = async (
 
   try {
     const post = await Post.findById(postId, "comments")!;
-    await Comment.findByIdAndDelete(commentId);
-    // await Comment.findByIdAndDelete(commentId);
+    const comment = await Comment.findById(commentId, "responses");
 
     if (!post) {
       const error: CustomError = {
@@ -259,13 +258,30 @@ export const deleteCommentHandler = async (
         status: 404,
       };
       throw error;
+    } else if (!comment) {
+      const error: CustomError = {
+        name: "Delete Comment Error",
+        messages: {
+          errors: [
+            {
+              value: commentId,
+              msg: "Comment not found",
+              param: "commentId",
+            },
+          ],
+        },
+        status: 404,
+      };
+      throw error;
     }
 
     post.comments = post.comments.filter(
       (id) => id.toString() !== commentId.toString()
     );
-
     await post.save();
+
+    await ResponseModel.deleteMany({ _id: { $in: comment.responses } });
+    await Comment.deleteOne({ _id: commentId });
 
     res.status(201).json({
       messege: "the comment has been deleted",

@@ -4,6 +4,7 @@ import cloudinary from "../utils/cloudinary";
 import User from "../models/User";
 import Post from "../models/Post";
 import { CustomError } from "./controllerTypes";
+import Comment from "../models/Comment";
 
 export const createHandler = async (
   req: Request,
@@ -166,11 +167,12 @@ export const deleteHandler = async (
   res: Response,
   next: NextFunction
 ) => {
+  const userId = res.locals.userId;
   const postId = req.params.postId;
   try {
-    const result = await Post.findByIdAndDelete(postId);
+    const post = await Post.findById(postId, "comments")!;
 
-    if (!result) {
+    if (!post) {
       const error: CustomError = {
         name: "Delete Post error",
         messages: {
@@ -186,9 +188,16 @@ export const deleteHandler = async (
       };
       throw error;
     }
-    res
-      .status(201)
-      .json({ messege: "the post has been deleted", postId: postId });
+
+    await Comment.deleteMany({ _id: { $in: post.comments } });
+    await Post.deleteOne({ _id: postId });
+
+    const user = await User.findById(userId, "posts");
+    user!.posts = user?.posts.filter((id) => id !== postId)!;
+
+    await user?.save();
+
+    res.status(201).json({ messege: " post deleted", postId: postId });
   } catch (err) {
     next(err);
   }

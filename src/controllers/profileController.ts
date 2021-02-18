@@ -643,7 +643,7 @@ export const makeFriendHandler = async (
   res: Response,
   next: NextFunction
 ) => {
-  const userId = res.locals.userId;
+  const userId: string = res.locals.userId;
   const requestId = req.params.requestId;
 
   try {
@@ -670,11 +670,13 @@ export const makeFriendHandler = async (
     const fromUser = await User.findById(request.fromUser.userId)!;
 
     user!.follows = user?.follows.filter(
-      (id) => id !== request.fromUser.userId
+      (id) => id.toString() !== request.fromUser.userId.toString()
     )!;
     user?.friends.push(request.fromUser.userId);
 
-    fromUser!.followers = fromUser?.followers.filter((id) => id !== userId)!;
+    fromUser!.followers = fromUser?.followers.filter(
+      (id) => id.toString() !== userId.toString()
+    )!;
     fromUser?.friends.push(userId);
 
     user?.friendRequests.delete(requestId);
@@ -702,7 +704,7 @@ export const refuseRequestHandler = async (
 
   try {
     const user = await User.findById(userId);
-    const result = user?.friendRequests.delete(requestId);
+    user?.friendRequests.delete(requestId);
 
     await user?.save();
 
@@ -730,12 +732,10 @@ export const markRequestSawHanlder = async (
 
     await user?.save();
 
-    return res
-      .status(201)
-      .json({
-        messege: "requests updated",
-        userRequests: user?.friendRequests,
-      });
+    return res.status(201).json({
+      messege: "requests updated",
+      userRequests: user?.friendRequests,
+    });
   } catch (error) {
     next(error);
   }
