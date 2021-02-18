@@ -1,9 +1,11 @@
-import { Request, Response, NextFunction } from "express";
+import { Request, Response, NextFunction, request } from "express";
 import User from "../models/User";
 import Post from "../models/Post";
 import Album from "../models/Album";
 import { CustomError } from "./controllerTypes";
 import { JobData, SchoolData } from "../models/modelTypes";
+import moongose from "mongoose";
+import { Filter } from "@material-ui/icons";
 
 export const profileImageHandler = async (
   req: Request,
@@ -464,7 +466,7 @@ export const getUserInfo = async (
   }
 };
 
-export const addFollowHnalder = async (
+export const addFollowHandler = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -473,41 +475,85 @@ export const addFollowHnalder = async (
   const followUserId = req.body.followId;
 
   try {
-    const currentUser = await User.findById(userId, "follows");
-    const followUser = await User.findById(followUserId, "followers");
+    const currentUser = await User.findById(userId);
+    const followUser = await User.findById(followUserId);
+
+    if (!currentUser) {
+      const error: CustomError = {
+        name: "Add follow error",
+        messages: {
+          errors: [
+            {
+              value: userId,
+              msg: "not user found",
+              param: "userId",
+            },
+          ],
+        },
+        status: 404,
+      };
+      throw error;
+    } else if (!followUser) {
+      const error: CustomError = {
+        name: "Add follow error",
+        messages: {
+          errors: [
+            {
+              value: followUserId,
+              msg: "not user found",
+              param: "followId",
+            },
+          ],
+        },
+        status: 404,
+      };
+      throw error;
+    }
 
     const followUserIndex = currentUser?.follows.findIndex(
       (value) => value.toString() === followUserId.toString()
     );
-    console.log(followUserIndex);
 
-    if (followUserIndex === -1) {
-      currentUser?.follows.push(followUser?._id);
-      followUser?.followers.push(currentUser?._id);
-      await currentUser?.save();
-      await followUser?.save();
-      res.status(200).json({
-        messege: "the relation follow-follower has been created",
-        userFollows: currentUser?.follows,
-      });
-    } else {
-      currentUser?.follows.splice(followUserIndex!, 1);
-      const followerUserIndex = followUser?.followers.findIndex(
-        (value) => value.toString() === userId
-      );
-      followUser?.followers.splice(followerUserIndex!, 1);
-      await currentUser?.save();
-      await followUser?.save();
-
-      res.status(200).json({
-        messege: "the relation follow-follower has been deleted",
-        userFollows: currentUser?.follows,
-      });
+    if (followUserIndex !== -1) {
+      return res.json({ messege: "this user is already send a request" });
     }
+
+    const requestId = moongose.Types.ObjectId();
+    followUser?.friendRequests.set(requestId.toHexString(), {
+      fromUser: {
+        userId,
+        profilePic: currentUser?.profile?.imageProfile!,
+        username: currentUser?.userName!,
+      },
+      createdAt: new Date(),
+      status: "pending",
+      saw: false,
+    });
+
+    currentUser?.follows.push(followUserId);
+    followUser?.followers.push(userId);
+
+    await currentUser?.save();
+    await followUser?.save();
+
+    res.status(200).json({
+      messege: "relation follow-follower created and request sent",
+      userFollows: currentUser?.follows,
+    });
+
+    //   currentUser?.follows.splice(followUserIndex!, 1);
+    //   const followerUserIndex = followUser?.followers.findIndex(
+    //     (value) => value.toString() === userId
+    //   );
+    //   followUser?.followers.splice(followerUserIndex!, 1);
+    //   await currentUser?.save();
+    //   await followUser?.save();
+
+    //   res.status(200).json({
+    //     messege: "the relation follow-follower has been deleted",
+    //     userFollows: currentUser?.follows,
+    //   });
   } catch (err) {
-    if (!err.statusCode) {
-      err.statusCode = 500;
-    }
     next(err);
   }
 };
@@ -527,24 +573,32 @@ export const getFollowsHandler = async (
     );
 
     if (!userFollows) {
-      return res
-        .status(404)
-        .json({ messege: "No user was found with this id", userId });
+      const error: CustomError = {
+        name: "Get follows error",
+        messages: {
+          errors: [
+            {
+              value: userId,
+              msg: "not user found",
+              param: "userId",
+            },
+          ],
+        },
+        status: 404,
+      };
+      throw error;
     }
 
     res.status(200).json({
-      messege: "result for fetch all the user follows",
+      messege: "fetch all the user follows",
       follows: userFollows?.follows,
     });
   } catch (err) {
-    if (!err.statusCode) {
-      err.statusCode = 500;
-    }
     next(err);
   }
 };
 
-export const getFollowersHanlder = async (
+export const getFollowersHandler = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -559,9 +613,20 @@ export const getFollowersHanlder = async (
     );
 
     if (!userFollowers) {
-      return res
-        .status(404)
-        .json({ messege: "No user was found with this id", userId });
+      const error: CustomError = {
+        name: "Get followers error",
+        messages: {
+          errors: [
+            {
+              value: userId,
+              msg: "not user found",
+              param: "userId",
+            },
+          ],
+        },
+        status: 404,
+      };
+      throw error;
     }
 
     res.status(200).json({
@@ -569,9 +634,109 @@ export const getFollowersHanlder = async (
       followers: userFollowers?.followers,
     });
   } catch (err) {
-    if (!err.statusCode) {
-      err.statusCode = 500;
-    }
     next(err);
+  }
+};
+
+export const makeFriendHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const userId = res.locals.userId;
+  const requestId = req.params.requestId;
+
+  try {
+    const user = await User.findById(userId)!;
+    const request = user?.friendRequests.get(requestId);
+
+    if (!request) {
+      const error: CustomError = {
+        name: "Make friend error",
+        messages: {
+          errors: [
+            {
+              value: requestId,
+              msg: "not request found",
+              param: "requestId",
+            },
+          ],
+        },
+        status: 404,
+      };
+      throw error;
+    }
+
+    const fromUser = await User.findById(request.fromUser.userId)!;
+
+    user!.follows = user?.follows.filter(
+      (id) => id !== request.fromUser.userId
+    )!;
+    user?.friends.push(request.fromUser.userId);
+
+    fromUser!.followers = fromUser?.followers.filter((id) => id !== userId)!;
+    fromUser?.friends.push(userId);
+
+    user?.friendRequests.delete(requestId);
+
+    await user?.save();
+    await fromUser?.save();
+
+    return res.status(201).json({
+      messege: "Friend relation created",
+      userFriends: user?.friends,
+      userRequest: user?.friendRequests,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const refuseRequestHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const userId = res.locals.userId;
+  const requestId = req.params.requestId;
+
+  try {
+    const user = await User.findById(userId);
+    const result = user?.friendRequests.delete(requestId);
+
+    await user?.save();
+
+    return res
+      .status(201)
+      .json({ messege: "request deleted", userRequests: user?.friendRequests });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const markRequestSawHanlder = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const userId = res.locals.userId;
+
+  try {
+    const user = await User.findById(userId);
+
+    user?.friendRequests.forEach((request, id) => {
+      request.saw = true;
+    });
+
+    await user?.save();
+
+    return res
+      .status(201)
+      .json({
+        messege: "requests updated",
+        userRequests: user?.friendRequests,
+      });
+  } catch (error) {
+    next(error);
   }
 };

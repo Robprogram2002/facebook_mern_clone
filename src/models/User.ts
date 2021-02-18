@@ -34,6 +34,7 @@ interface FriendRequest {
   };
   status: string;
   createdAt: any;
+  saw: boolean;
 }
 
 export interface IUser extends Document {
@@ -146,6 +147,10 @@ const FriendRequestSchema = new Schema({
     profilePic: String,
   },
   status: String,
+  saw: {
+    type: Boolean,
+    default: false,
+  },
   createdAt: Schema.Types.Date,
 });
 
