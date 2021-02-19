@@ -1,6 +1,6 @@
 import { Router } from "express";
 import {
-  createCommentHanlder,
+  createPostCommentHanlder,
   createResponseHandler,
   deleteCommentHandler,
   getCommentsHandler,
@@ -16,7 +16,7 @@ import isAuth from "../middleware/is-auth";
 
 const router = Router();
 
-router.post("/create", isAuth, createCommentHanlder);
+router.post("/create", isAuth, createPostCommentHanlder);
 router.post("/add-response", isAuth, createResponseHandler);
 router.get("/:postId", isAuth, getCommentsHandler);
 router.get("/responses/:commentId", isAuth, getResponsesHandler);

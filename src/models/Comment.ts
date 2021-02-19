@@ -1,39 +1,40 @@
 import { Schema, Document, model } from "mongoose";
-import { LikeSchema, Reaction, ReactionSchema } from "./modelTypes";
+import {
+  Like,
+  LikeSchema,
+  OwnerSchema,
+  Reaction,
+  ReactionSchema,
+} from "./modelTypes";
+import Post from "./Post";
+import Response from "./Response";
 
 export interface IComment extends Document {
   author: {
-    userId: string;
-    username: string;
+    _id: string;
+    name: string;
     profilePic: string;
   };
   contentText?: string;
   contentImage?: string;
-  likes: Map<string, { username: string }>;
+  likes: Map<string, Like>;
   reactions: Map<string, Reaction>;
   responses: string[];
 }
 
 const commentSchema = new Schema(
   {
-    author: {
-      // type: Schema.Types.ObjectId,
-      // ref: "User",
-      userId: Schema.Types.ObjectId,
-      username: String,
-      profilePic: String,
-    },
+    author: OwnerSchema,
     contentText: {
       type: String,
-      default: null,
     },
     contentImage: {
       type: String,
-      default: null,
     },
     likes: {
       type: Map,
       of: LikeSchema,
+      default: {},
     },
     responses: [
       {
@@ -44,9 +45,14 @@ const commentSchema = new Schema(
     reactions: {
       type: Map,
       of: ReactionSchema,
+      default: {},
     },
   },
   { timestamps: true }
 );
+
+commentSchema.pre("remove", async function (this: IComment) {
+  await Response.deleteMany({ _id: { $in: this.responses } });
+});
 
 export default model<IComment>("Comment", commentSchema, "comments");

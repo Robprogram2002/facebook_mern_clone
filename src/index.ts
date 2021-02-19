@@ -12,7 +12,8 @@ const main = async () => {
     await mongoose.connect(uriDB, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
-      useFindAndModify: true,
+      useFindAndModify: false,
+      useCreateIndex: true,
     });
     const server = app.listen(app.get("port"));
     console.log("Server on port", app.get("port"));

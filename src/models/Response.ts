@@ -1,10 +1,10 @@
 import { Schema, Document, model } from "mongoose";
-import { Like, LikeSchema } from "./modelTypes";
+import { Like, LikeSchema, OwnerSchema } from "./modelTypes";
 
 interface IResponse extends Document {
-  author: {
-    userId: string;
-    username: string;
+  creator: {
+    name: string;
+    _id: string;
     profilePic: string;
   };
   contentText?: string;
@@ -14,13 +14,7 @@ interface IResponse extends Document {
 
 const ResponseSchema = new Schema(
   {
-    author: {
-      // type: Schema.Types.ObjectId,
-      // ref: "User",
-      userId: Schema.Types.ObjectId,
-      username: String,
-      profilePic: String,
-    },
+    creator: OwnerSchema,
     contentText: String,
     contentImage: String,
     likes: {

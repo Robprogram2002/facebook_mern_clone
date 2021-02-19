@@ -2,8 +2,8 @@ import { Request, Response, NextFunction } from "express";
 import User from "../models/User";
 import Post from "../models/Post";
 import Album from "../models/Album";
-import Comment from "../models/Comment";
 import { CustomError } from "./controllerTypes";
+import { Types } from "mongoose";
 
 export const getOneHandler = async (
   req: Request,
@@ -13,9 +13,31 @@ export const getOneHandler = async (
   const albumId = req.params.albumId;
 
   try {
-    const album = await Album.findById(albumId)
-      .populate("comments")
-      .populate("items");
+    // const album = await Album.findById(albumId)
+    //   .populate("comments")
+    //   .populate("items")
+    //   .lean()
+    //   .exec();
+
+    const album = await Album.aggregate([
+      { $match: { _id: Types.ObjectId(albumId) } },
+      {
+        $lookup: {
+          from: "comments",
+          localField: "comments",
+          foreignField: "_id",
+          as: "comments",
+        },
+      },
+      {
+        $lookup: {
+          from: "posts",
+          localField: "items",
+          foreignField: "_id",
+          as: "items",
+        },
+      },
+    ]).exec();
 
     if (!album) {
       const error: CustomError = {
@@ -90,23 +112,23 @@ export const createOneHandler = async (
     }
 
     // if () {
-    const post = await Post.create({
+    const post = new Post({
       creator: {
-        name: user?.userName!,
-        profilePic: profile?.imageProfile!,
+        name: user?.userName,
+        profilePic: profile.imageProfile,
         _id: user?._id,
       },
       contentImage: media,
       contentText: description,
-      type: "NewAlbum",
-      status: "active",
-      comments: [],
-      reactions: [],
-      likes: [],
+      type: "newAlbum",
     });
 
-    const newAlbum = await Album.create({
-      userId: userid,
+    const newAlbum = new Album({
+      creator: {
+        _id: userid,
+        name: user?.userName,
+        profilePic: profile.imageProfile,
+      },
       title: title,
       items: [post.id],
       cover: media,
@@ -116,21 +138,18 @@ export const createOneHandler = async (
     post.gallery = {
       title: title,
       id: newAlbum._id,
+      coverImage: media,
     };
-
-    await post.save();
 
     user?.albums?.push(newAlbum._id);
     user?.posts.push(post._id);
     newAlbum.items?.push(post._id);
 
-    await newAlbum.save();
-    await user?.save();
+    await Promise.all([post.save(), newAlbum.save(), user?.save()]);
 
     res.status(201).json({
       messege: "the album and the post has been created",
       album: newAlbum,
-      // post: post,
     });
   } catch (err) {
     next(err);
@@ -203,7 +222,7 @@ export const updateOneHandler = async (
     await album.save();
 
     if (media !== undefined && media !== "") {
-      const post = await Post.create({
+      const post = new Post({
         creator: {
           name: user?.userName!,
           profilePic: user!.profile!.imageProfile!,
@@ -212,22 +231,17 @@ export const updateOneHandler = async (
         contentImage: media,
         contentText: description ? description : null,
         type: "album",
-        status: "active",
-        comments: [],
-        reactions: [],
-        likes: [],
         gallery: {
           title: album.title,
           id: album._id,
+          coverImage: media,
         },
       });
 
-      await post.save();
       user?.posts?.push(post._id);
-      await user?.save();
-
       album?.items?.push(post.id);
-      await album?.save();
+
+      await Promise.all([post.save(), user?.save(), album.save()]);
 
       res.status(201).json({
         messege: "album updated and new post created",
@@ -248,10 +262,11 @@ export const deleteAlbumHandler = async (
   next: NextFunction
 ) => {
   const albumId = req.body.albumId;
-  const userId = res.locals.userId;
 
   try {
-    const album = await Album.findById(albumId);
+    const album = await Album.findById(albumId, async (err, doc) => {
+      await doc?.remove();
+    });
 
     if (!album) {
       const error: CustomError = {
@@ -270,16 +285,6 @@ export const deleteAlbumHandler = async (
       throw error;
     }
 
-    await Comment.deleteMany({ _id: { $in: album.comments } });
-    await Album.deleteOne({ _id: album._id });
-
-    const user = await User.findById(userId, "albums")!;
-
-    user!.albums = user?.albums.filter(
-      (id) => id.toString() !== albumId.toString()
-    )!;
-    await user?.save();
-
     res
       .status(200)
       .json({ messege: "the album has been deleted", result: album });
@@ -293,7 +298,6 @@ export const removeAlbumItem = async (
   res: Response,
   next: NextFunction
 ) => {
-  const userId = res.locals.userId;
   const albumId = req.body.albumId;
   const itemId = req.body.itemId;
 
@@ -317,19 +321,11 @@ export const removeAlbumItem = async (
       throw error;
     }
 
-    const post = await Post.findById(itemId)!;
-    await Comment.deleteMany({ _id: { $in: post?.comments } });
-
     album.items = album.items?.filter(
       (id) => id.toString() !== itemId.toString()
     )!;
-    await album?.save();
 
-    const user = await User.findById(userId, "posts");
-    user!.posts = user?.posts.filter(
-      (id) => id.toString() !== itemId.toString()
-    )!;
-    await user?.save();
+    await album?.save();
 
     res.status(200).json({
       messege: "album item has been removed",

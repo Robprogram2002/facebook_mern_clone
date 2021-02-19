@@ -1,12 +1,12 @@
 import { Request, NextFunction, Response } from "express";
-// import { validationResult } from "express-validator";
 import User from "../models/User";
 import Post from "../models/Post";
 import Comment from "../models/Comment";
 import { CustomError } from "./controllerTypes";
 import ResponseModel from "../models/Response";
+import mongoose from "mongoose";
 
-export const createCommentHanlder = async (
+export const createPostCommentHanlder = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -29,7 +29,7 @@ export const createCommentHanlder = async (
             },
           ],
         },
-        status: 404,
+        status: 400,
       };
       throw error;
     }
@@ -55,23 +55,21 @@ export const createCommentHanlder = async (
     }
 
     // create new comment
-    const comment = await Comment.create({
+    const comment = new Comment({
       author: {
-        userId,
-        username: user?.userName!,
-        profilePic: user?.profile?.imageProfile!,
+        _id: userId,
+        name: user?.userName,
+        profilePic: user?.profile.imageProfile,
       },
       contentText: contentText,
       contentImage: contentImage,
-      likes: {},
       reactions: {},
-      responses: [],
     });
-    await comment.save();
 
     // save comment's id on post
     post.comments.push(comment.id);
-    await post.save();
+
+    await Promise.all([comment.save(), post.save()]);
 
     res
       .status(201)
@@ -104,7 +102,7 @@ export const createResponseHandler = async (
             },
           ],
         },
-        status: 404,
+        status: 400,
       };
       throw error;
     }
@@ -129,28 +127,26 @@ export const createResponseHandler = async (
       throw error;
     }
 
-    const response = await ResponseModel.create({
-      author: {
-        username: user?.userName!,
-        userId,
-        profilePic: user?.profile?.imageProfile!,
+    const response = new ResponseModel({
+      creator: {
+        name: user?.userName,
+        _id: userId,
+        profilePic: user?.profile.imageProfile,
       },
       likes: {},
       contentImage,
       contentText,
     });
 
-    await response.save();
-
     comment.responses.push(response.id);
-    await comment.save();
+
+    await Promise.all([response.save(), comment.save()]);
 
     return res.status(201).json({
       messege: "Responses created and added to comment",
       commentResponses: comment.responses,
     });
   } catch (err) {
-    console.log(err);
     next(err);
   }
 };
@@ -163,9 +159,22 @@ export const getCommentsHandler = async (
   const postId = req.params.postId;
 
   try {
-    const postComments = await Post.findById(postId, "comments").populate(
-      "comments"
-    );
+    // const postComments = await Post.findById(postId, "comments")
+    //   .populate("comments")
+    //   .lean()
+    //   .exec();
+
+    const postComments = await Post.aggregate([
+      { $match: { _id: mongoose.Types.ObjectId(postId) } },
+      {
+        $lookup: {
+          from: "comments",
+          localField: "comments",
+          foreignField: "_id",
+          as: "comments",
+        },
+      },
+    ]).exec();
 
     if (!postComments) {
       const error: CustomError = {
@@ -201,9 +210,22 @@ export const getResponsesHandler = async (
   const commentId = req.params.commentId;
 
   try {
-    const commentResponses = await Comment.findById(commentId, "responses")
-      .populate("responses", "", "Response")
-      .exec();
+    // const commentResponses = await Comment.findById(commentId, "responses")
+    //   .populate("responses")
+    //   .lean()
+    //   .exec();
+
+    const commentResponses = await Comment.aggregate([
+      { $match: { _id: mongoose.Types.ObjectId(commentId) } },
+      {
+        $lookup: {
+          from: "responses",
+          localField: "responses",
+          foreignField: "_id",
+          as: "responses",
+        },
+      },
+    ]).exec();
 
     if (!commentResponses) {
       const error: CustomError = {
@@ -241,7 +263,6 @@ export const deleteCommentHandler = async (
 
   try {
     const post = await Post.findById(postId, "comments")!;
-    const comment = await Comment.findById(commentId, "responses");
 
     if (!post) {
       const error: CustomError = {
@@ -258,7 +279,17 @@ export const deleteCommentHandler = async (
         status: 404,
       };
       throw error;
-    } else if (!comment) {
+    }
+
+    const comment = await Comment.findById(
+      commentId,
+      "responses",
+      async (err, comment) => {
+        await comment?.remove();
+      }
+    );
+
+    if (!comment) {
       const error: CustomError = {
         name: "Delete Comment Error",
         messages: {
@@ -279,9 +310,6 @@ export const deleteCommentHandler = async (
       (id) => id.toString() !== commentId.toString()
     );
     await post.save();
-
-    await ResponseModel.deleteMany({ _id: { $in: comment.responses } });
-    await Comment.deleteOne({ _id: commentId });
 
     res.status(201).json({
       messege: "the comment has been deleted",
@@ -452,7 +480,7 @@ export const addCommentLikeHandler = async (
 
   try {
     const comment = await Comment.findById(commentId, "likes");
-    const user = await User.findById(userId, "userName")!;
+    const user = await User.findById(userId, "userName profile.imageProfile")!;
 
     if (!comment) {
       const error: CustomError = {
@@ -486,6 +514,7 @@ export const addCommentLikeHandler = async (
     if (!currentLike) {
       comment.likes.set(userId, {
         username: user?.userName!,
+        userProfile: user?.profile.imageProfile!,
       });
 
       await comment.save();
@@ -537,7 +566,7 @@ export const addCommentReactionHanlder = async (
     }
 
     const comment = await Comment.findById(commentId, "reactions");
-    const user = await User.findById(userId, "userName");
+    const user = await User.findById(userId, "userName profile.imageProfile");
 
     if (!comment) {
       const error: CustomError = {
@@ -564,6 +593,7 @@ export const addCommentReactionHanlder = async (
       comment.reactions.set(userId, {
         username: user?.userName!,
         instance: reaction,
+        userProfile: user?.profile.imageProfile!,
       });
 
       await comment.save();
@@ -617,7 +647,7 @@ export const addResponseLikeHandler = async (
 
     if (!response) {
       const error: CustomError = {
-        name: "Update response Error",
+        name: "add response like Error",
         messages: {
           errors: [
             {
@@ -632,13 +662,16 @@ export const addResponseLikeHandler = async (
       throw error;
     }
 
-    const user = await User.findById(userId, "userName")!;
+    const user = await User.findById(userId, "userName profile.imageProfile")!;
 
     const currentLike = response.likes.get(userId);
 
     if (!currentLike) {
       // create one
-      response.likes.set(userId, { username: user?.userName! });
+      response.likes.set(userId, {
+        username: user?.userName!,
+        userProfile: user?.profile.imageProfile!,
+      });
 
       await response.save();
 

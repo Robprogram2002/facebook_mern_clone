@@ -1,5 +1,13 @@
 import { Schema, model, Document } from "mongoose";
-import { Like, LikeSchema, Reaction, ReactionSchema } from "./modelTypes";
+import Comment from "./Comment";
+import {
+  Like,
+  LikeSchema,
+  OwnerSchema,
+  Reaction,
+  ReactionSchema,
+} from "./modelTypes";
+import User from "./User";
 
 export interface IPost extends Document {
   creator: {
@@ -10,7 +18,7 @@ export interface IPost extends Document {
   contentText?: string;
   contentImage?: string;
   contentVideo?: string;
-  type: string;
+  type: "post" | "album" | "newAlbum" | "conmunity";
   status: "active" | "suspended" | "deleted";
   comments: string[];
   // reactions: Record<string, Reaction>;
@@ -20,35 +28,51 @@ export interface IPost extends Document {
   gallery?: {
     title: string;
     id: string;
+    coverImage: string;
   };
   comunityId?: string;
 }
 
+const PostGallerySchema = new Schema(
+  {
+    galleryId: {
+      type: Schema.Types.ObjectId,
+      ref: "Album",
+      required: true,
+    },
+    title: {
+      type: String,
+      required: true,
+    },
+    coverImage: {
+      type: String,
+      required: true,
+    },
+  },
+  { _id: false, id: false }
+);
+
 const postSchema = new Schema(
   {
-    creator: {
-      name: String,
-      _id: Schema.Types.ObjectId,
-      profilePic: String,
-    },
+    creator: OwnerSchema,
     contentText: {
       type: String,
-      default: null,
+      trim: true,
     },
     contentImage: {
       type: String,
-      default: null,
     },
     contentVideo: {
       type: String,
-      default: null,
     },
     type: {
       type: String,
+      enum: ["post", "album", "newAlbum", "conmunity"],
       default: "post",
     },
     status: {
       type: String,
+      enum: ["active", "suspended", "deleted"],
       default: "active",
     },
     comments: [
@@ -60,15 +84,14 @@ const postSchema = new Schema(
     reactions: {
       type: Map,
       of: ReactionSchema,
+      default: {},
     },
     likes: {
       type: Map,
       of: LikeSchema,
+      default: {},
     },
-    gallery: {
-      title: String,
-      id: Schema.Types.ObjectId,
-    },
+    gallery: PostGallerySchema,
     comunityId: {
       type: Schema.Types.ObjectId,
       ref: "Comunity",
@@ -76,5 +99,19 @@ const postSchema = new Schema(
   },
   { timestamps: true }
 );
+
+postSchema.pre("remove", async function (this: IPost) {
+  await Comment.find({ _id: { $in: this.comments } })
+    .lean()
+    .remove()
+    .exec();
+
+  const user = await User.findById(this.creator._id).select(["posts"]).exec();
+  user!.posts = user?.posts.filter(
+    (id) => id.toString() !== this.id.toString()
+  )!;
+
+  await user?.save();
+});
 
 export default model<IPost>("Post", postSchema, "posts");

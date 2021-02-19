@@ -1,11 +1,10 @@
-import { Request, Response, NextFunction, request } from "express";
-import User from "../models/User";
+import { Request, Response, NextFunction } from "express";
+import User, { IUser } from "../models/User";
 import Post from "../models/Post";
 import Album from "../models/Album";
 import { CustomError } from "./controllerTypes";
 import { JobData, SchoolData } from "../models/modelTypes";
-import moongose from "mongoose";
-import { Filter } from "@material-ui/icons";
+import moongose, { Types } from "mongoose";
 
 export const profileImageHandler = async (
   req: Request,
@@ -34,23 +33,23 @@ export const profileImageHandler = async (
       throw error;
     }
 
-    const user = await User.findById(userId)!;
-    // @ts-ignore
-    user.profile?.imageProfile = imageProfile;
+    const user = await User.findById(userId).select([
+      "profile.imageProfile ",
+      "userName",
+      "posts",
+    ])!;
 
-    const post = await Post.create({
+    user!.profile.imageProfile = imageProfile;
+
+    const post = new Post({
       creator: {
-        name: user?.userName!,
+        name: user?.userName,
         profilePic: imageProfile,
         _id: user?._id,
       },
       contentText: description,
       contentImage: imageProfile,
       type: "album",
-      status: "active",
-      comments: [],
-      reactions: [],
-      likes: [],
     });
 
     user?.posts.push(post._id);
@@ -58,13 +57,19 @@ export const profileImageHandler = async (
     const defaultAlbumName = "Perfil Photos";
 
     const perfilAlbum = await Album.findOne({
-      userId: user?._id,
+      "creator._id": userId,
       title: defaultAlbumName,
-    });
+    })
+      .select(["items", "cover"])
+      .exec();
 
     if (!perfilAlbum) {
-      const newAlbum = await Album.create({
-        userId: user?._id,
+      const newAlbum = new Album({
+        creator: {
+          _id: userId,
+          name: user?.userName,
+          profilePic: user?.profile.imageProfile,
+        },
         title: defaultAlbumName,
         items: [post._id],
         cover: imageProfile,
@@ -77,6 +82,7 @@ export const profileImageHandler = async (
       post.gallery = {
         title: newAlbum.title,
         id: newAlbum._id,
+        coverImage: imageProfile,
       };
     } else {
       perfilAlbum.items!.push(post._id);
@@ -84,12 +90,12 @@ export const profileImageHandler = async (
       post.gallery = {
         title: perfilAlbum.title,
         id: perfilAlbum._id,
+        coverImage: imageProfile,
       };
       await perfilAlbum.save();
     }
 
-    await user?.save();
-    await post.save();
+    await Promise.all([user?.save(), post.save()]);
 
     res.status(201).json({
       messege: "user profile image updated",
@@ -126,37 +132,40 @@ export const portadaImageHanlder = async (
       };
       throw error;
     }
-    const user = await User.findById(userId)!;
+    const user = await User.findById(userId)
+      .select(["userName", "profile.imageProfile", "posts"])
+      .exec()!;
 
-    //@ts-ignore
-    user?.profile.portada = imagePortada;
+    user!.profile.portada = imagePortada;
 
-    const post = await Post.create({
+    const post = new Post({
       creator: {
-        name: user?.userName!,
-        profilePic: user?.profile?.imageProfile!,
+        name: user?.userName,
+        profilePic: user?.profile.imageProfile,
         _id: user?._id,
       },
       contentText: description,
       contentImage: imagePortada,
       type: "album",
-      status: "active",
-      comments: [],
-      reactions: [],
-      likes: [],
     });
 
     user?.posts.push(post._id);
     const defaultAlbumName = "Cover Photos";
 
     const portadaAlbum = await Album.findOne({
-      userId: user?._id,
+      "creator._id": userId,
       title: defaultAlbumName,
-    });
+    })
+      .select(["items", "cover"])
+      .exec();
 
     if (!portadaAlbum) {
-      const newAlbum = await Album.create({
-        userId: user?._id,
+      const newAlbum = new Album({
+        creator: {
+          _id: userId,
+          name: user?.userName,
+          profilePic: user?.profile.imageProfile,
+        },
         title: defaultAlbumName,
         items: [post._id],
         cover: imagePortada,
@@ -167,6 +176,7 @@ export const portadaImageHanlder = async (
       post.gallery = {
         title: newAlbum.title,
         id: newAlbum._id,
+        coverImage: imagePortada,
       };
 
       user?.albums.push(newAlbum._id);
@@ -177,12 +187,12 @@ export const portadaImageHanlder = async (
       post.gallery = {
         title: portadaAlbum.title,
         id: portadaAlbum._id,
+        coverImage: imagePortada,
       };
       await portadaAlbum.save();
     }
 
-    await post.save();
-    await user?.save();
+    await Promise.all([user?.save(), post.save()]);
 
     res.status(201).json({
       messege: "user's cover image updated",
@@ -206,7 +216,10 @@ export const generalInfoHandler = async (
   const birthday = req.body.birthday;
 
   try {
-    const userInfo = await User.findById(userId, "profile.information")!;
+    const userInfo = await User.findById(
+      userId,
+      "profile.information.general"
+    )!;
     const { profile } = userInfo!;
 
     // if (completeName) {
@@ -263,7 +276,10 @@ export const educationInfoHandler = async (
 
       throw error;
     }
-    const userInfo = await User.findById(userId, "profile.information")!;
+    const userInfo = await User.findById(
+      userId,
+      "profile.information.education"
+    )!;
     const { profile } = userInfo!;
 
     profile!.information!.education = {
@@ -293,7 +309,7 @@ export const palcesInfoHandler = async (
   const visitedPlaces: { place: string; time: string }[] = req.body.visits;
 
   try {
-    const userInfo = await User.findById(userId, "profile.information");
+    const userInfo = await User.findById(userId, "profile.information.places");
     const { profile } = userInfo!;
 
     profile!.information!.places = {
@@ -327,7 +343,10 @@ export const basicInfoHandler = async (
   const profesionalStatus = req.body.profesionalStatus;
 
   try {
-    const userInfo = await User.findById(userId, "profile.information");
+    const userInfo = await User.findById(
+      userId,
+      "profile.information.basicInfo"
+    );
 
     userInfo!.profile!.information!.basicInfo = {
       language,
@@ -381,7 +400,7 @@ export const lifeEventsIfonHanlder = async (
       };
       throw error;
     }
-    const user = await User.findById(userId, "profile.information")!;
+    const user = await User.findById(userId, "profile.information.lifeEvents")!;
 
     user!.profile!.information!.lifeEvents = [
       ...user?.profile?.information?.lifeEvents!,
@@ -406,7 +425,22 @@ export const getALbumsHanlder = async (
   const userId = req.params.userId;
 
   try {
-    const userAlbums = await User.findById(userId, "albums").populate("albums");
+    // const userAlbums = await User.findById(userId, "albums")
+    //   .populate("albums")
+    //   .lean()
+    //   .exec();
+
+    const userAlbums = await User.aggregate([
+      { $match: { _id: Types.ObjectId(userId) } },
+      {
+        $lookup: {
+          from: "albums",
+          localField: "albums",
+          foreignField: "_id",
+          as: "albums",
+        },
+      },
+    ]).exec();
 
     if (!userAlbums) {
       const error: CustomError = {
@@ -446,7 +480,9 @@ export const getUserInfo = async (
       .populate("posts")
       .populate("follows")
       .populate("followers")
-      .populate("albums");
+      .populate("albums")
+      .lean()
+      .exec();
 
     if (!user) {
       return res
@@ -475,8 +511,11 @@ export const addFollowHandler = async (
   const followUserId = req.body.followId;
 
   try {
-    const currentUser = await User.findById(userId);
-    const followUser = await User.findById(followUserId);
+    const currentUser = await User.findById(userId).select(["follows"]).exec();
+    const followUser = await User.findById(followUserId).select([
+      "followers",
+      "friendRequests",
+    ]);
 
     if (!currentUser) {
       const error: CustomError = {
@@ -533,8 +572,7 @@ export const addFollowHandler = async (
     currentUser?.follows.push(followUserId);
     followUser?.followers.push(userId);
 
-    await currentUser?.save();
-    await followUser?.save();
+    await Promise.all([currentUser?.save(), followUser?.save()]);
 
     res.status(200).json({
       messege: "relation follow-follower created and request sent",
@@ -566,11 +604,26 @@ export const getFollowsHandler = async (
   const userId = req.params.userId;
 
   try {
-    const userFollows = await User.findById(userId, "follows").populate(
-      "follows",
-      "userName profile.imageProfile follows followers",
-      "User"
-    );
+    // const userFollows = await User.findById(userId, "follows")
+    //   .populate(
+    //     "follows",
+    //     "userName profile.imageProfile follows followers",
+    //     "User"
+    //   )
+    //   .lean()
+    //   .exec();
+
+    const userFollows = await User.aggregate([
+      { $match: { _id: Types.ObjectId(userId) } },
+      {
+        $lookup: {
+          from: "users",
+          localField: "follows",
+          foreignField: "_id",
+          as: "follows",
+        },
+      },
+    ]).exec();
 
     if (!userFollows) {
       const error: CustomError = {
@@ -606,11 +659,26 @@ export const getFollowersHandler = async (
   const userId = req.params.userId;
 
   try {
-    const userFollowers = await User.findById(userId, "followers").populate(
-      "followers",
-      "userName profile.imageProfile follows followers",
-      "User"
-    );
+    // const userFollowers = await User.findById(userId, "followers")
+    //   .populate(
+    //     "followers",
+    //     "userName profile.imageProfile follows followers",
+    //     "User"
+    //   )
+    //   .lean()
+    //   .exec();
+
+    const userFollowers: IUser = await User.aggregate([
+      { $match: { _id: Types.ObjectId(userId) } },
+      {
+        $lookup: {
+          from: "users",
+          localField: "followers",
+          foreignField: "_id",
+          as: "followers",
+        },
+      },
+    ]).exec();
 
     if (!userFollowers) {
       const error: CustomError = {
@@ -647,7 +715,9 @@ export const makeFriendHandler = async (
   const requestId = req.params.requestId;
 
   try {
-    const user = await User.findById(userId)!;
+    const user = await User.findById(userId)
+      .select(["follows", "friends", "friendRequests"])
+      .exec();
     const request = user?.friendRequests.get(requestId);
 
     if (!request) {
@@ -667,7 +737,9 @@ export const makeFriendHandler = async (
       throw error;
     }
 
-    const fromUser = await User.findById(request.fromUser.userId)!;
+    const fromUser = await User.findById(request.fromUser.userId)
+      .select(["followers", "friends"])
+      .exec();
 
     user!.follows = user?.follows.filter(
       (id) => id.toString() !== request.fromUser.userId.toString()
@@ -681,8 +753,7 @@ export const makeFriendHandler = async (
 
     user?.friendRequests.delete(requestId);
 
-    await user?.save();
-    await fromUser?.save();
+    await Promise.all([user?.save(), fromUser?.save()]);
 
     return res.status(201).json({
       messege: "Friend relation created",
@@ -703,7 +774,7 @@ export const refuseRequestHandler = async (
   const requestId = req.params.requestId;
 
   try {
-    const user = await User.findById(userId);
+    const user = await User.findById(userId).select(["friendRequests"]).exec();
     user?.friendRequests.delete(requestId);
 
     await user?.save();
@@ -724,7 +795,7 @@ export const markRequestSawHanlder = async (
   const userId = res.locals.userId;
 
   try {
-    const user = await User.findById(userId);
+    const user = await User.findById(userId).select(["friendRequests"]).exec();
 
     user?.friendRequests.forEach((request, id) => {
       request.saw = true;

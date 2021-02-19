@@ -1,10 +1,9 @@
 import { Request, Response, NextFunction } from "express";
-// import { validationResult } from "express-validator";
 import cloudinary from "../utils/cloudinary";
 import User from "../models/User";
 import Post from "../models/Post";
 import { CustomError } from "./controllerTypes";
-import Comment from "../models/Comment";
+import mongoose from "mongoose";
 
 export const createHandler = async (
   req: Request,
@@ -39,10 +38,11 @@ export const createHandler = async (
       throw error;
     }
 
-    const user = await User.findById(
-      userId,
-      "posts userName profile.imageProfile"
-    );
+    const user = await User.findById(userId).select([
+      "posts",
+      "userName",
+      "profile.imageProfile",
+    ]);
 
     if (!user) {
       const error: CustomError = {
@@ -81,7 +81,6 @@ export const createHandler = async (
     }
 
     let videoUrl;
-    console.log("emqwkmjowmqjm");
     if (contentVideo && contentVideo !== "") {
       try {
         console.log("hegewqqg qww quy qwuy tweq we ");
@@ -102,7 +101,7 @@ export const createHandler = async (
     }
 
     // create and save post
-    const post = await Post.create({
+    const post = new Post({
       creator: {
         _id: user?._id,
         name: user?.userName,
@@ -112,16 +111,12 @@ export const createHandler = async (
       contentText: contentText,
       contentVideo: contentVideo,
       type: "post",
-      status: "active",
-      comments: [],
-      reactions: [],
-      likes: [],
     });
-    await post.save();
 
     // add postId to user'posts array
     user?.posts.push(post._id);
-    await user?.save();
+
+    await Promise.all([user?.save(), post.save()]);
 
     res.status(201).json({
       message: "Post created successfully!",
@@ -139,7 +134,26 @@ export const getSingleHanlder = async (
 ) => {
   const postId = req.params.postId;
   try {
-    const post = await Post.findById(postId);
+    // ***** USING POPULATE METHOD (NOT BEST PRACTICE!!)
+    // const post = await Post.findById(postId)
+    //   .lean()
+    //   .populate("comments")
+    //   .lean()
+    //   .exec();
+
+    // USING AGGREGATE PIPELINE (BEST PRACTICE :) )
+    const post = await Post.aggregate([
+      { $match: { _id: mongoose.Types.ObjectId(postId) } },
+      {
+        $lookup: {
+          from: "comments",
+          localField: "comments",
+          foreignField: "_id",
+          as: "comments",
+        },
+      },
+    ]).exec();
+
     if (!post) {
       const error: CustomError = {
         name: "Get Single Post error",
@@ -156,6 +170,7 @@ export const getSingleHanlder = async (
       };
       throw error;
     }
+
     res.status(200).json({ message: "Post fetched.", post: post });
   } catch (err) {
     next(err);
@@ -170,9 +185,11 @@ export const deleteHandler = async (
   const userId = res.locals.userId;
   const postId = req.params.postId;
   try {
-    const post = await Post.findById(postId, "comments")!;
+    const result = await Post.findById(postId, async (err, post) => {
+      await post?.remove();
+    });
 
-    if (!post) {
+    if (!result) {
       const error: CustomError = {
         name: "Delete Post error",
         messages: {
@@ -189,13 +206,14 @@ export const deleteHandler = async (
       throw error;
     }
 
-    await Comment.deleteMany({ _id: { $in: post.comments } });
-    await Post.deleteOne({ _id: postId });
+    // This task is completed on the model middleware (Post)
 
-    const user = await User.findById(userId, "posts");
-    user!.posts = user?.posts.filter((id) => id !== postId)!;
+    // const user = await User.findById(userId, "posts");
+    // user!.posts = user?.posts.filter(
+    //   (id) => id.toString() !== postId.toString()
+    // )!;
 
-    await user?.save();
+    // await user?.save();
 
     res.status(201).json({ messege: " post deleted", postId: postId });
   } catch (err) {
@@ -209,7 +227,9 @@ export const getAllHanlder = async (
   next: NextFunction
 ) => {
   try {
-    const posts = await Post.find({}).exec();
+    // -1 => descending order
+    const posts = await Post.find({}).sort({ createdAt: -1 }).lean().exec();
+
     if (!posts) {
       const error: CustomError = {
         name: "Get All Posts error",
@@ -226,6 +246,7 @@ export const getAllHanlder = async (
       };
       throw error;
     }
+
     res.status(200).json({ messege: "All the posts", posts: posts });
   } catch (err) {
     next(err);
@@ -239,7 +260,23 @@ export const getByUserHandler = async (
 ) => {
   try {
     const userId = req.params.userId;
-    const user = await User.findById(userId, "posts").populate("posts").exec();
+    // const user = await User.findById(userId, "posts")
+    // .lean()
+    //   .populate("posts")
+    //   .lean()
+    //   .exec();
+
+    const user = await User.aggregate([
+      { $match: { _id: mongoose.Types.ObjectId(userId) } },
+      {
+        $lookup: {
+          from: "posts",
+          localField: "posts",
+          foreignField: "_id",
+          as: "posts",
+        },
+      },
+    ]).exec();
 
     if (!user) {
       const error: CustomError = {
@@ -257,13 +294,6 @@ export const getByUserHandler = async (
       };
       throw error;
     }
-    // const userPosts = await User.findById(userId, "posts -_id").populate(
-    //   "posts",
-    //   {},
-    //   "Post"
-    // );
-
-    // const posts = await Post.find({ "creator._id": userId }).exec();
 
     res.status(200).json({ message: "Posts fetchets", posts: user.posts });
   } catch (err) {
@@ -299,7 +329,7 @@ export const addReactionHanlder = async (
     }
 
     const post = await Post.findById(postId, "reactions");
-    const user = await User.findById(userId, "userName");
+    const user = await User.findById(userId, "userName profile.imageProfile");
 
     if (!post) {
       const error: CustomError = {
@@ -382,6 +412,7 @@ export const addReactionHanlder = async (
       post.reactions.set(userId, {
         username: user?.userName!,
         instance: reaction,
+        userProfile: user?.profile.imageProfile!,
       });
 
       await post.save();
@@ -417,7 +448,6 @@ export const addReactionHanlder = async (
       }
     }
   } catch (err) {
-    console.log(err);
     next(err);
   }
 };
@@ -432,7 +462,7 @@ export const addLikeHandler = async (
 
   try {
     const post = await Post.findById(postId, "likes");
-    const user = await User.findById(userId, "userName");
+    const user = await User.findById(userId, "userName profile.imageProfile");
 
     if (!post) {
       const error: CustomError = {
@@ -456,6 +486,7 @@ export const addLikeHandler = async (
     if (!currentLike) {
       post.likes.set(userId, {
         username: user?.userName!,
+        userProfile: user?.profile.imageProfile!,
       });
 
       await post.save();
@@ -475,6 +506,7 @@ export const addLikeHandler = async (
       });
     }
   } catch (error) {
+    console.log(error);
     next(error);
   }
 };
